@@ -1,3 +1,3 @@
 ### vocabulary
 
-![Vocabulario](connect4\connext4_uml.svg)  
+![Vocabulario](./connext4_uml.svg)  
