@@ -3,7 +3,7 @@ class Connect4
 class Board{
     -GRID:Array
     getGrid()
-    getCell()
+    putToken()
 }
 
 class BoardView {
@@ -23,7 +23,7 @@ class Token
 enum Color{
 }
 Connect4 *--> "1" Board
-Connect4 *--> "1" BoardView
+Connect4 o--> "1" BoardView
 Connect4 *--> "2" Player
 BoardView ..> Cell
 Player o--> Token

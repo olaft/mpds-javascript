@@ -5,7 +5,7 @@ initConnect4().play();
 
 function initConnect4() {
     let board;
-    const boardView = initBoardView();
+    let boardView;
     const MAX_PLAYERS = 2;
     const MAX_TURNS = 42;
     let winnerCells;
@@ -20,15 +20,11 @@ function initConnect4() {
                 players.push(initPlayer('Y'));
                 players[1].setBot(true);
                 let currentPlayer;
+                boardView = initBoardView();
+                boardView.showBoard(board.getGrid());
                 do {
                     currentPlayer = players[this.nextTurn()];
-                    let col;
-                    if (currentPlayer.isBot()) {
-                        col = this.getAutoSelectedColumn();
-                    } else {
-                        col = boardView.getSelectedColumn(currentPlayer.getColor());
-                    }
-                    board.putToken(col, currentPlayer.getToken());
+                    board.putToken(this.getColumn(currentPlayer), currentPlayer.getToken());
                     boardView.showBoard(board.getGrid());
                 } while (!this.isWinner(currentPlayer.getColor()) && turn < MAX_TURNS);
 
@@ -39,93 +35,71 @@ function initConnect4() {
                 }
             } while (this.isResumed());
         },
+        getColumn: function (play) {
+            let col;
+            let repead = false;
+            do {
+                if (play.isBot()) {
+                    col = this.getAutoSelectedColumn();
+                } else {
+                    col = boardView.getSelectedColumn(play.getColor());
+                }
+                if (board.isValidColumn(col)) {
+                    repead = board.isColumnFull(col);
+                    if (repead) {
+                        boardView.showAlert(`La columna ${col + 1} esta llena`);
+                    }
+                } else {
+                    boardView.showAlert(`La columna ${col + 1} no es valida`);
+                    repead = true;
+                }
+            } while (repead)
+            return col;
+        },
+        isResumed: function () {
+            return boardView.askResume() === 's';
+        },
         getAutoSelectedColumn: function () {
             return Math.floor(Math.random() * board.getColums());
         },
         isWinner: function (color) {
             const TOKENS_TO_WIN = 4;
-            function getRowConnet4() {
-                let alignedTokens;
-                let isConnet4 = false;
-                for (let row = 0; !isConnet4 && row < board.getRows(); row++) {
-                    for (let cursor = 0; cursor < board.getColums() - TOKENS_TO_WIN + 1; cursor++) {
-                        alignedTokens = 0;
-                        winnerCells = [];
-                        for (let col = cursor; !isConnet4 && col < cursor + TOKENS_TO_WIN; col++) {
-                            let token = board.getCell(row, col).getToken();
-                            if (token !== undefined) {
-                                if (token.getColor() === color) {
-                                    alignedTokens++;
-                                    winnerCells.push(board.getCell(row, col));
-                                    isConnet4 = alignedTokens === TOKENS_TO_WIN
-                                }
-                            }
-                        }
+            let someConnet4 = false;
+            for (let row = 0; !someConnet4 && row < board.getRows() - TOKENS_TO_WIN + 1; row++) {
+                for (let col = 0; !someConnet4 && col < board.getColums() - TOKENS_TO_WIN + 1; col++) {
+                    let leftRight = [];
+                    let bottomTop = [];
+                    let bottomLeft = [];
+                    let bottomRight = [];
+                    for (let cursor = 0; cursor < TOKENS_TO_WIN; cursor++) {
+                        leftRight.push(board.getCell(row, col + cursor));
+                        bottomTop.push(board.getCell(row + cursor, col));
+                        bottomLeft.push(board.getCell(row + cursor, col + cursor));
+                        bottomRight.push(board.getCell(row + cursor, col + TOKENS_TO_WIN - cursor - 1));
+                    }
+                    someConnet4 = isConnet4(leftRight, color) || 
+                    isConnet4(bottomTop, color) || 
+                    isConnet4(bottomLeft, color) || 
+                    isConnet4(bottomRight, color);
+                }
+            }
+            return someConnet4;
+            function isConnet4(cells, color) {
+                let connet4 = true;
+                for (let i = 0; i < TOKENS_TO_WIN; i++) {
+                    connet4 &&= !cells[i].isEmpty();
+                    if (connet4) {
+                        connet4 &&= cells[i].getToken().getColor() === color;
                     }
                 }
-                return isConnet4;
-            }
-            function getColumnConnet4() {
-                let alignedTokens;
-                let isConnet4 = false;
-                for (let col = 0; !isConnet4 && col < board.getColums(); col++) {
-                    for (let cursor = 0; !isConnet4 && cursor < board.getRows() - TOKENS_TO_WIN + 1; cursor++) {
-                        alignedTokens = 0;
-                        winnerCells = [];
-                        for (let row = cursor; !isConnet4 && row < cursor + TOKENS_TO_WIN; row++) {
-                            let token = board.getCell(row, col).getToken();
-                            if (token !== undefined) {
-                                if (token.getColor() === color) {
-                                    alignedTokens++;
-                                    winnerCells.push(board.getCell(row, col));
-                                    isConnet4 = alignedTokens === TOKENS_TO_WIN
-                                }
-                            }
-                        }
-                    }
+                if (connet4) {
+                    winnerCells = [...cells];
                 }
-                return isConnet4;
+                return connet4;
             }
-            function getDiagonalConnect4() {
-                let alignedLeftToRight;
-                let alignedRightToLeft;
-                let isLeftConnet4 = false;
-                let isRightConnet4 = false;
-                for (let row = 0; !isLeftConnet4 && row < board.getRows() - TOKENS_TO_WIN + 1; row++) {
-                    for (let col = 0; !isLeftConnet4 && col < board.getColums() - TOKENS_TO_WIN + 1; col++) {
-                        alignedLeftToRight = 0;
-                        alignedRightToLeft = 0;
-                        winnerCells = [];
-                        for (let cursor = 0; (!isLeftConnet4 & !isRightConnet4) && cursor < TOKENS_TO_WIN; cursor++) {
-                            let token = board.getCell(row + cursor, col + cursor).getToken();
-                            if (token !== undefined) {
-                                if (token.getColor() === color) {
-                                    alignedLeftToRight++;
-                                    winnerCells.push(board.getCell(row, col));
-                                    isLeftConnet4 = alignedLeftToRight === TOKENS_TO_WIN;
-                                }
-                            }
-                            token = board.getCell(row + cursor, col + TOKENS_TO_WIN - cursor - 1).getToken();
-                            if (token !== undefined) {
-                                if (token.getColor() === color) {
-                                    alignedRightToLeft++;
-                                    winnerCells.push(board.getCell(row, col));
-                                    isRightConnet4 = alignedRightToLeft === TOKENS_TO_WIN;
-                                }
-                            }
-                        }
-
-                    }
-                }
-                return isLeftConnet4 || isRightConnet4;
-            }
-            return getRowConnet4() || getColumnConnet4() || getDiagonalConnect4();
         },
         nextTurn: function () {
             return (turn++) % MAX_PLAYERS;
-        },
-        isResumed: function () {
-            return boardView.askResume() === 's';
         }
     }
 }
@@ -138,8 +112,8 @@ function initBoard() {
         GRID[row] = [];
         for (let col = 0; col < COLUMNS; col++) {
             let cell = initCell();
-            cell.setRow(row+1);
-            cell.setColumn(col+1);
+            cell.setRow(row + 1);
+            cell.setColumn(col + 1);
             GRID[row][col] = cell;
         }
     }
@@ -153,6 +127,12 @@ function initBoard() {
                 }
             }
         },
+        isColumnFull: function (col) {
+            return this.getCell(ROWS - 1, col).getToken() !== undefined;
+        },
+        isValidColumn: function (col) {
+            return col < COLUMNS;
+        },
         getGrid: function () {
             return [...GRID];
         },
@@ -162,8 +142,8 @@ function initBoard() {
         getRows: function () {
             return ROWS;
         },
-        getCell: function (row, column) {
-            return GRID[row][column];
+        getCell: function (row, col) {
+            return GRID[row][col];
         }
     }
 }
@@ -197,13 +177,18 @@ function initBoardView() {
         showWinner: function (color, winnerCells) {
             console.writeln(`--------------------------------------`);
             console.writeln(`Felicidades '${color}' eres el ganador :-)`);
-            for(let i = 0; i < winnerCells.length; i++) {
+            for (let i = 0; i < winnerCells.length; i++) {
                 let cell = winnerCells[i];
                 console.write(`(${cell.getRow()}, ${cell.getColumn()}) `);
             }
             console.writeln(`\n--------------------------------------`);
         },
-        showTies: function () {
+        showAlert: function (msg) {
+            console.writeln(`--------------------------------------`);
+            console.writeln(msg);
+            console.writeln(`--------------------------------------`);
+        },
+        showTie: function () {
             console.writeln(`--------------------------------------`);
             console.writeln(`No hay un ganador :-(`);
             console.writeln(`--------------------------------------`);
