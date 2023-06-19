@@ -13,14 +13,13 @@ function initConnect4() {
     return {
         play: function () {
             do {
-                board = initBoard();
+                board = createBoard();
                 turn = 0;
+                boardView = createBoardView();
                 const players = [];
-                players.push(initPlayer('R'));
-                players.push(initPlayer('Y'));
-                players[1].setBot(true);
+                players.push(boardView.getPlayerType('R'));
+                players.push(boardView.getPlayerType('Y'));
                 let currentPlayer;
-                boardView = initBoardView();
                 boardView.showBoard(board.getGrid());
                 do {
                     currentPlayer = players[this.nextTurn()];
@@ -104,14 +103,14 @@ function initConnect4() {
     }
 }
 
-function initBoard() {
+function createBoard() {
     const COLUMNS = 7;
     const ROWS = 6;
     const GRID = [];
     for (let row = 0; row < ROWS; row++) {
         GRID[row] = [];
         for (let col = 0; col < COLUMNS; col++) {
-            let cell = initCell();
+            let cell = createCell();
             cell.setRow(row + 1);
             cell.setColumn(col + 1);
             GRID[row][col] = cell;
@@ -148,8 +147,21 @@ function initBoard() {
     }
 }
 
-function initBoardView() {
+function createBoardView() {
     return {
+        getPlayerType: function (color) {
+            let answer;
+            do {
+                answer =  console.readNumber(`Selecciona tipo de jugador para '${color}' 1: Player 2: CPU`);
+            } while(answer < 1 || answer > 2)
+            let player = createPlayer(color);
+            if(answer === 1) {
+                player.setAsBot(false);
+            } else {
+                player.setAsBot(true);
+            }
+            return player;
+        },
         getSelectedColumn: function (color) {
             return console.readNumber(`Jugador '${color}' dame una columna`) - 1;
         },
@@ -210,7 +222,7 @@ function initBoardView() {
     }
 }
 
-function initPlayer(color) {
+function createPlayer(color) {
     let bot;
     return {
         getColor: function () {
@@ -220,18 +232,18 @@ function initPlayer(color) {
             color = otherColor;
         },
         getToken: function () {
-            return initToken(color);
+            return createToken(color);
         },
         isBot() {
             return bot;
         },
-        setBot(otherIsBot) {
+        setAsBot(otherIsBot) {
             bot = otherIsBot;
         }
     }
 }
 
-function initCell() {
+function createCell() {
     let column = 0;
     let row = 0;
     let token;
@@ -260,7 +272,7 @@ function initCell() {
     }
 }
 
-function initToken(otherColor) {
+function createToken(otherColor) {
     let color = otherColor;
     return {
         getColor: function () {
