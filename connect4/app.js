@@ -1,85 +1,52 @@
 const { Console } = require(`../console-mpds`);
 const console = new Console();
 
-initConnect4().play();
+createConnect4().play();
 
-function initConnect4() {
-    let board;
-    let boardView;
+function createConnect4() {
     const MAX_PLAYERS = 2;
     const MAX_TURNS = 42;
-    let winnerCells;
+    let connectedCells;
     let turn;
+    let gameView;
     return {
         play: function () {
             do {
-                board = createBoard();
                 turn = 0;
-                boardView = createBoardView();
-                const players = [];
-                players.push(boardView.getPlayerType('R'));
-                players.push(boardView.getPlayerType('Y'));
-                let currentPlayer;
-                boardView.showBoard(board.getGrid());
+                gameView = createGameView();
                 do {
-                    currentPlayer = players[this.nextTurn()];
-                    board.putToken(this.getColumn(currentPlayer), currentPlayer.getToken());
-                    boardView.showBoard(board.getGrid());
-                } while (!this.isWinner(currentPlayer.getColor()) && turn < MAX_TURNS);
-
+                    gameView.play(this.nextTurn());
+                } while (!this.isWinner(gameView.getCurrentPlayerColor()) && turn < MAX_TURNS);
                 if (turn < MAX_TURNS) {
-                    boardView.showWinner(currentPlayer.getColor(), winnerCells);
+                    gameView.showWinner(gameView.getCurrentPlayerColor(), connectedCells);
                 } else {
-                    boardView.showTie();
+                    gameView.showTied();
                 }
             } while (this.isResumed());
         },
-        getColumn: function (play) {
-            let col;
-            let repead = false;
-            do {
-                if (play.isBot()) {
-                    col = this.getAutoSelectedColumn();
-                } else {
-                    col = boardView.getSelectedColumn(play.getColor());
-                }
-                if (board.isValidColumn(col)) {
-                    repead = board.isColumnFull(col);
-                    if (repead) {
-                        boardView.showAlert(`La columna ${col + 1} esta llena`);
-                    }
-                } else {
-                    boardView.showAlert(`La columna ${col + 1} no es valida`);
-                    repead = true;
-                }
-            } while (repead)
-            return col;
-        },
         isResumed: function () {
-            return boardView.askResume() === 's';
-        },
-        getAutoSelectedColumn: function () {
-            return Math.floor(Math.random() * board.getColums());
+            return gameView.askResume() === 's';
         },
         isWinner: function (color) {
             const TOKENS_TO_WIN = 4;
             let someConnet4 = false;
+            const board = gameView.getBoard();
             for (let row = 0; !someConnet4 && row < board.getRows() - TOKENS_TO_WIN + 1; row++) {
                 for (let col = 0; !someConnet4 && col < board.getColums() - TOKENS_TO_WIN + 1; col++) {
                     let leftRight = [];
                     let bottomTop = [];
-                    let bottomLeft = [];
-                    let bottomRight = [];
+                    let leftBottomTopRight = [];
+                    let bottomRightTopLeft = [];
                     for (let cursor = 0; cursor < TOKENS_TO_WIN; cursor++) {
                         leftRight.push(board.getCell(row, col + cursor));
                         bottomTop.push(board.getCell(row + cursor, col));
-                        bottomLeft.push(board.getCell(row + cursor, col + cursor));
-                        bottomRight.push(board.getCell(row + cursor, col + TOKENS_TO_WIN - cursor - 1));
+                        leftBottomTopRight.push(board.getCell(row + cursor, col + cursor));
+                        bottomRightTopLeft.push(board.getCell(row + cursor, col + TOKENS_TO_WIN - cursor - 1));
                     }
-                    someConnet4 = isConnet4(leftRight, color) || 
-                    isConnet4(bottomTop, color) || 
-                    isConnet4(bottomLeft, color) || 
-                    isConnet4(bottomRight, color);
+                    someConnet4 = isConnet4(leftRight, color) ||
+                        isConnet4(bottomTop, color) ||
+                        isConnet4(leftBottomTopRight, color) ||
+                        isConnet4(bottomRightTopLeft, color);
                 }
             }
             return someConnet4;
@@ -92,7 +59,7 @@ function initConnect4() {
                     }
                 }
                 if (connet4) {
-                    winnerCells = [...cells];
+                    connectedCells = [...cells];
                 }
                 return connet4;
             }
@@ -112,7 +79,7 @@ function createBoard() {
         for (let col = 0; col < COLUMNS; col++) {
             let cell = createCell();
             cell.setRow(row + 1);
-            cell.setColumn(col + 1);
+            cell.setCol(col + 1);
             GRID[row][col] = cell;
         }
     }
@@ -147,60 +114,28 @@ function createBoard() {
     }
 }
 
-function createBoardView() {
+function createGameView() {
+    const boardView = createBoardView();
+    const playersViews = [createPlayerView('R'), createPlayerView('Y')];
+    boardView.show();
+    let currePlayerView;
     return {
-        getPlayerType: function (color) {
-            let answer;
-            do {
-                answer =  console.readNumber(`Selecciona tipo de jugador para '${color}' 1: Player 2: CPU`);
-            } while(answer < 1 || answer > 2)
-            let player = createPlayer(color);
-            if(answer === 1) {
-                player.setAsBot(false);
-            } else {
-                player.setAsBot(true);
-            }
-            return player;
-        },
-        getSelectedColumn: function (color) {
-            return console.readNumber(`Jugador '${color}' dame una columna`) - 1;
-        },
-        showBoard: function (boardGrid) {
-            console.writeln(`-------Conect4-------`);
-            for (let col = 0; col < boardGrid[0].length; col++) {
-                console.write(`|${col + 1}|`);
-            }
-            console.writeln(`\n---------------------`);
-            for (let row = boardGrid.length - 1; row >= 0; row--) {
-                for (let col = 0; col < boardGrid[row].length; col++) {
-                    let cell = boardGrid[row][col];
-                    if (cell !== undefined) {
-                        if (cell.getToken() !== undefined) {
-                            console.write(`|${cell.getToken().getColor()}|`);
-                        } else {
-                            console.write('|O|');
-                        }
-                    }
-                }
-                console.writeln();
-            }
-            console.writeln(`---------------------`);
+        play: function (turn) {
+            currePlayerView = playersViews[turn];
+            const selectetCol = currePlayerView.getCol(boardView.getBoard());
+            boardView.getBoard().putToken(selectetCol, currePlayerView.getToken());
+            boardView.show();
         },
         showWinner: function (color, winnerCells) {
             console.writeln(`--------------------------------------`);
             console.writeln(`Felicidades '${color}' eres el ganador :-)`);
             for (let i = 0; i < winnerCells.length; i++) {
                 let cell = winnerCells[i];
-                console.write(`(${cell.getRow()}, ${cell.getColumn()}) `);
+                console.write(`(${cell.getRow()}, ${cell.getCol()}) `);
             }
             console.writeln(`\n--------------------------------------`);
         },
-        showAlert: function (msg) {
-            console.writeln(`--------------------------------------`);
-            console.writeln(msg);
-            console.writeln(`--------------------------------------`);
-        },
-        showTie: function () {
+        showTied: function () {
             console.writeln(`--------------------------------------`);
             console.writeln(`No hay un ganador :-(`);
             console.writeln(`--------------------------------------`);
@@ -218,6 +153,89 @@ function createBoardView() {
                 }
             } while (!isValidAnswer);
             return answer;
+        },
+        getCurrentPlayerColor: function () {
+            return currePlayerView.getColor();
+        },
+        getBoard: function() {
+            return boardView.getBoard();
+        }
+    }
+}
+
+function createPlayerView(color) {
+    let player = createPlayer(color);
+    let answer;
+    do {
+        answer = console.readNumber(`[1] Player\n[2] CPU\nSelecciona tipo de jugador para '${player.getColor()}': `);
+    } while (answer < 1 || answer > 2)
+    player.setAsBot(answer !== 1);
+    return {
+        getColor: function () {
+            return player.getColor();
+        },
+        getToken: function () {
+            return player.getToken();
+        },
+        getCol: function (board) {
+            let col;
+            let repead = false;
+            do {
+                if (player.isBot()) {
+                    col = this.getAutoSelectedColumn(board);
+                } else {
+                    col = this.getSelectedColumn(player.getColor());
+                }
+                if (board.isValidColumn(col)) {
+                    repead = board.isColumnFull(col);
+                    if (repead) {
+                        console.writeln(`--------------------------------------`);
+                        console.writeln(`La columna ${col + 1} esta llena`);
+                    }
+                } else {
+                    console.writeln(`--------------------------------------`);
+                    console.writeln(`La columna ${col + 1} no es valida`);
+                    repead = true;
+                }
+            } while (repead)
+            return col;
+        },
+        getSelectedColumn: function (color) {
+            return console.readNumber(`Jugador '${color}' dame una columna`) - 1;
+        },
+        getAutoSelectedColumn: function (board) {
+            return Math.floor(Math.random() * board.getColums());
+        },
+    }
+}
+
+function createBoardView() {
+    let board = createBoard();
+    const EMTY_CELL = '|O|';
+    return {
+        show: function () {
+            console.writeln(`-------Conect4-------`);
+            for (let col = 0; col < board.getGrid()[0].length; col++) {
+                console.write(`|${col + 1}|`);
+            }
+            console.writeln(`\n---------------------`);
+            for (let row = board.getGrid().length - 1; row >= 0; row--) {
+                for (let col = 0; col < board.getGrid()[row].length; col++) {
+                    let cell = board.getGrid()[row][col];
+                    if (cell !== undefined) {
+                        if (cell.getToken() !== undefined) {
+                            console.write(`|${cell.getToken().getColor()}|`);
+                        } else {
+                            console.write(EMTY_CELL);
+                        }
+                    }
+                }
+                console.writeln();
+            }
+            console.writeln(`---------------------`);
+        },
+        getBoard: function () {
+            return board;
         }
     }
 }
@@ -244,15 +262,15 @@ function createPlayer(color) {
 }
 
 function createCell() {
-    let column = 0;
+    let col = 0;
     let row = 0;
     let token;
     return {
-        getColumn: function () {
-            return column;
+        getCol: function () {
+            return col;
         },
-        setColumn: function (otheColumn) {
-            column = otheColumn;
+        setCol: function (otheCol) {
+            col = otheCol;
         },
         getRow: function () {
             return row;
@@ -283,4 +301,3 @@ function createToken(otherColor) {
         }
     }
 }
-
