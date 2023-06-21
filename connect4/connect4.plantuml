@@ -5,9 +5,12 @@ class Board{
     getGrid()
     putToken()
 }
-
+class GameView {
+}
+class PlayerView {
+}
 class BoardView {
-    showBoard()
+    show()
 }
 class Player {
     -color
@@ -22,14 +25,16 @@ class Cell {
 class Token
 enum Color{
 }
-Connect4 *--> "1" Board
-Connect4 o--> "1" BoardView
-Connect4 *--> "2" Player
-BoardView ..> Cell
-Player o--> Token
+
+Connect4 *--> "1" GameView
+GameView *--> "2" PlayerView
+GameView *--> "1" BoardView
+PlayerView *--> "1" Player
+BoardView *--> "1" Board
 Token *--> Color
+Player o--> "0..21" Token
 Player ..> Color
 
 Board *--> "0..6x7" Cell
-Cell *--> "1" Token
+Cell o--> "1" Token
 @enduml

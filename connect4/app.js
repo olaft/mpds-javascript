@@ -15,7 +15,7 @@ function createConnect4() {
                 turn = 0;
                 gameView = createGameView();
                 do {
-                    gameView.play(this.nextTurn());
+                    gameView.playTurn(this.nextTurn());
                 } while (!this.isWinner(gameView.getCurrentPlayerColor()) && turn < MAX_TURNS);
                 if (turn < MAX_TURNS) {
                     gameView.showWinner(gameView.getCurrentPlayerColor(), connectedCells);
@@ -37,11 +37,11 @@ function createConnect4() {
                     let bottomTop = [];
                     let leftBottomTopRight = [];
                     let bottomRightTopLeft = [];
-                    for (let cursor = 0; cursor < TOKENS_TO_WIN; cursor++) {
-                        leftRight.push(board.getCell(row, col + cursor));
-                        bottomTop.push(board.getCell(row + cursor, col));
-                        leftBottomTopRight.push(board.getCell(row + cursor, col + cursor));
-                        bottomRightTopLeft.push(board.getCell(row + cursor, col + TOKENS_TO_WIN - cursor - 1));
+                    for (let growth = 0; growth < TOKENS_TO_WIN; growth++) {
+                        leftRight.push(board.getCell(row, col + growth));
+                        bottomTop.push(board.getCell(row + growth, col));
+                        leftBottomTopRight.push(board.getCell(row + growth, col + growth));
+                        bottomRightTopLeft.push(board.getCell(row + growth, col + TOKENS_TO_WIN - growth - 1));
                     }
                     someConnet4 = isConnet4(leftRight, color) ||
                         isConnet4(bottomTop, color) ||
@@ -70,57 +70,13 @@ function createConnect4() {
     }
 }
 
-function createBoard() {
-    const COLUMNS = 7;
-    const ROWS = 6;
-    const GRID = [];
-    for (let row = 0; row < ROWS; row++) {
-        GRID[row] = [];
-        for (let col = 0; col < COLUMNS; col++) {
-            let cell = createCell();
-            cell.setRow(row + 1);
-            cell.setCol(col + 1);
-            GRID[row][col] = cell;
-        }
-    }
-    return {
-        putToken: function (col, token) {
-            let isEmpty = false;
-            for (let row = 0; !isEmpty && row < ROWS; row++) {
-                isEmpty = this.getCell(row, col).isEmpty();
-                if (isEmpty) {
-                    this.getCell(row, col).setToken(token);
-                }
-            }
-        },
-        isColumnFull: function (col) {
-            return this.getCell(ROWS - 1, col).getToken() !== undefined;
-        },
-        isValidColumn: function (col) {
-            return col < COLUMNS;
-        },
-        getGrid: function () {
-            return [...GRID];
-        },
-        getColums: function () {
-            return COLUMNS;
-        },
-        getRows: function () {
-            return ROWS;
-        },
-        getCell: function (row, col) {
-            return GRID[row][col];
-        }
-    }
-}
-
 function createGameView() {
     const boardView = createBoardView();
     const playersViews = [createPlayerView('R'), createPlayerView('Y')];
     boardView.show();
     let currePlayerView;
     return {
-        play: function (turn) {
+        playTurn: function (turn) {
             currePlayerView = playersViews[turn];
             const selectetCol = currePlayerView.getCol(boardView.getBoard());
             boardView.getBoard().putToken(selectetCol, currePlayerView.getToken());
@@ -226,7 +182,7 @@ function createBoardView() {
                         if (cell.getToken() !== undefined) {
                             console.write(`|${cell.getToken().getColor()}|`);
                         } else {
-                            console.write(EMTY_CELL);
+                            console.write(EMPTY_CELL);
                         }
                     }
                 }
@@ -236,6 +192,50 @@ function createBoardView() {
         },
         getBoard: function () {
             return board;
+        }
+    }
+}
+
+function createBoard() {
+    const COLUMNS = 7;
+    const ROWS = 6;
+    const GRID = [];
+    for (let row = 0; row < ROWS; row++) {
+        GRID[row] = [];
+        for (let col = 0; col < COLUMNS; col++) {
+            let cell = createCell();
+            cell.setRow(row + 1);
+            cell.setCol(col + 1);
+            GRID[row][col] = cell;
+        }
+    }
+    return {
+        putToken: function (col, token) {
+            let isEmpty = false;
+            for (let row = 0; !isEmpty && row < ROWS; row++) {
+                isEmpty = this.getCell(row, col).isEmpty();
+                if (isEmpty) {
+                    this.getCell(row, col).setToken(token);
+                }
+            }
+        },
+        isColumnFull: function (col) {
+            return this.getCell(ROWS - 1, col).getToken() !== undefined;
+        },
+        isValidColumn: function (col) {
+            return col < COLUMNS;
+        },
+        getGrid: function () {
+            return [...GRID];
+        },
+        getColums: function () {
+            return COLUMNS;
+        },
+        getRows: function () {
+            return ROWS;
+        },
+        getCell: function (row, col) {
+            return GRID[row][col];
         }
     }
 }
@@ -269,8 +269,8 @@ function createCell() {
         getCol: function () {
             return col;
         },
-        setCol: function (otheCol) {
-            col = otheCol;
+        setCol: function (otherCol) {
+            col = otherCol;
         },
         getRow: function () {
             return row;
