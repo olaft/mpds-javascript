@@ -1,5 +1,8 @@
-@startuml
+@startuml Connect4
 class Connect4
+
+class Direction
+
 class Board{
     -GRID:Array
     getGrid()
@@ -22,19 +25,26 @@ class Cell {
     getToken()
     setToken()
 }
+class Coordinate
 class Token
-enum Color{
+class Color{
 }
+class Connect4Line
 
 Connect4 *--> "1" GameView
 GameView *--> "2" PlayerView
 GameView *--> "1" BoardView
 PlayerView *--> "1" Player
 BoardView *--> "1" Board
+Connect4Line *--> "1..4" Cell
+Board --> Connect4Line
+Board --> Direction
 Token *--> Color
 Player o--> "0..21" Token
 Player ..> Color
 
-Board *--> "0..6x7" Cell
+Coordinate <|-- Cell
+Coordinate --> Direction
+Board *---> "0..6x7" Cell
 Cell o--> "1" Token
 @enduml
