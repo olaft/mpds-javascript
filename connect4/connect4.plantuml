@@ -19,13 +19,26 @@ class Player {
     -color
     getToken()
     getColor()
+    getSelectedColumn()
+}
+class UserPlayer {
+    getSelectedColumn()
+}
+class BotPlayer {
+    getSelectedColumn()
 }
 class Cell {
     -token
     getToken()
     setToken()
 }
-class Coordinate
+class Coordinate {
+    getShifted()
+    getCol()
+    setCol()
+    getRow()
+    setRow()
+}
 class Token
 class Color{
 }
@@ -42,7 +55,8 @@ Board --> Direction
 Token *--> Color
 Player o--> "0..21" Token
 Player ..> Color
-
+Player <|-- UserPlayer
+Player <|-- BotPlayer
 Coordinate <|-- Cell
 Coordinate --> Direction
 Board *---> "0..6x7" Cell

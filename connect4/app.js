@@ -29,24 +29,24 @@ class Color {
 class Direction {
     #stepsToNort;
     #stepsToEast;
-    static #NORT = new Direction(1, 0);
-    static #NORT_EAST = new Direction(1, 1);
-    static #EAST = new Direction(0, 1);
-    static #SOUTH_EAST = new Direction(1, -1);
-    static #SOUTH = new Direction(0, -1);
-    static #SOUTH_WEST = new Direction(-1, -1);
-    static #WEST = new Direction(-1, 0);
-    static #NORT_WEST = new Direction(-1, 1);
+    static NORT = new Direction(1, 0);
+    static NORT_EAST = new Direction(1, 1);
+    static EAST = new Direction(0, 1);
+    static SOUTH_EAST = new Direction(1, -1);
+    static SOUTH = new Direction(-1, 0);
+    static SOUTH_WEST = new Direction(-1, -1);
+    static WEST = new Direction(0, -1);
+    static NORT_WEST = new Direction(-1, 1);
 
     static ALL_DIRECTIONS = [
-        Direction.#NORT,
-        Direction.#NORT_EAST,
-        Direction.#EAST,
-        Direction.#SOUTH_EAST,
-        Direction.#SOUTH,
-        Direction.#SOUTH_WEST,
-        Direction.#WEST,
-        Direction.#NORT_WEST
+        Direction.NORT,
+        Direction.NORT_EAST,
+        Direction.EAST,
+        Direction.SOUTH_EAST,
+        Direction.SOUTH,
+        Direction.SOUTH_WEST,
+        Direction.WEST,
+        Direction.NORT_WEST
     ];
 
     constructor(stepsToEast, stepsToNort) {
@@ -142,11 +142,15 @@ class Cell extends Coordinate {
         this.#connectedCells.set(direction.getKey(), cells);
     }
 
-    getLine(key) {
+    getConnections() {
+        return this.#connectedCells;
+    }
+
+    getConnect4Line(directionKey) {
         let connect4Line = new Connect4Line();
-        let nextCell = this.#connectedCells.get(key);
+        let nextCell = this.#connectedCells.get(directionKey);
         if (nextCell) {
-            connect4Line = nextCell.getLine(key);
+            connect4Line = nextCell.getConnect4Line(directionKey);
         }
         connect4Line.addCell(this);
         return connect4Line;
@@ -211,11 +215,9 @@ class Connect4Line {
 
 
 class Player {
-    #bot;
     #color;
 
     constructor(color) {
-        this.#bot = false;
         this.#color = color;
     }
 
@@ -231,15 +233,53 @@ class Player {
         return new Token(this.#color);
     }
 
-    isBot() {
-        return this.#bot;
+    getSelectedColumn() { };
+
+}
+
+class UserPlayer extends Player {
+
+    constructor(color) {
+        super(color);
     }
 
-    setAsBot(bot) {
-        this.#bot = bot;
+    getSelectedColumn() {
+        return null;
     }
 }
 
+class PlayerBot extends Player {
+    #board = new Board();
+    constructor(color, board) {
+        super(color);
+
+        this.#board = board;
+    }
+
+    getSelectedColumn() {
+        let prioritiCell = new Cell();
+        for (let col = 0; col < Board.COLUMNS; col++) {
+            if (!this.#board.isColumnFull(col)) {
+                let emptyCell = this.#board.getTopEmptyCell(col);
+                let coordinate = emptyCell.getShifted(Direction.SOUTH);
+                if (this.#board.isItWithin(coordinate)) {
+                    let cell = this.#board.getCell(coordinate);
+                    if (cell.getConnections().size > prioritiCell.getConnections().size && cell.getConnections().size > 2) {
+                        prioritiCell = cell;
+                        console.writeln(` ${prioritiCell} size ${prioritiCell.getConnections().size}`);
+                    }
+                }
+            }
+        }
+
+        if(!prioritiCell.isEmpty()) {
+            return prioritiCell.getCol();
+        }
+        
+        return Math.floor(Math.random() * Board.COLUMNS);
+    }
+
+}
 
 class Board {
     static COLUMNS = 7;
@@ -261,33 +301,42 @@ class Board {
 
     dropToken(col, token) {
         this.#connect4Line = new Connect4Line();
+        let cell = this.getTopEmptyCell(col);
+        if (cell) {
+            cell.setToken(token);
+            this.#lastFilledCell = cell;
+            this.connectCell(this.#lastFilledCell);
+        }
+    }
+
+    getTopEmptyCell(col) {
+        let emptyCell;
         let isEmpty = false;
-        for (let row = 0; !isEmpty && row < Board.ROWS; row++) {
+        for (let row = 0; !isEmpty && !this.isColumnFull(col) && row < Board.ROWS; row++) {
             let coordinate = new Coordinate(row, col);
             isEmpty = this.getCell(coordinate).isEmpty();
             if (isEmpty) {
-                this.getCell(coordinate).setToken(token);
-                this.#lastFilledCell = this.getCell(coordinate);
-                this.connectCell(this.#lastFilledCell);
+                emptyCell = this.getCell(coordinate);
             }
         }
+        return emptyCell;
     }
 
     connectCell(cell) {
         for (let direction of Direction.ALL_DIRECTIONS) {
-            let shifted = cell.getShifted(direction);
-            if (this.isItWithin(shifted)) {
-                let nextCell = this.getCell(shifted);
+            let cordinate = cell.getShifted(direction);
+
+            if (this.isItWithin(cordinate)) {
+                let nextCell = this.getCell(cordinate);
                 if (cell.samenToken(nextCell)) {
                     cell.addConnection(nextCell, direction);
                     nextCell.addConnection(cell, direction.getInverse());
 
-                    let connect4Line = cell.getLine(direction.getKey());
-                    this.#setConnect4Line(connect4Line);
+                    let connect4Line = cell.getConnect4Line(direction.getKey());
                     if (!connect4Line.isConnet4()) {
-                        connect4Line = nextCell.getLine(direction.getInverse().getKey())
-                        this.#setConnect4Line(connect4Line);
+                        connect4Line = nextCell.getConnect4Line(direction.getInverse().getKey())
                     }
+                    this.#setConnect4Line(connect4Line);
                 }
             }
         }
@@ -331,13 +380,15 @@ class Board {
 class PlayerView {
     #player;
 
-    constructor(color) {
-        this.#player = new Player(color);
+    constructor(color, board) {
         let answer;
+
+        console.writeln(`------- ${board}`);
         do {
-            answer = console.readNumber(`[1] Player\n[2] CPU\nSelecciona tipo de jugador para '${this.#player.getColor().getName()}': `);
+            answer = console.readNumber(`[1] Player\n[2] CPU\nSelecciona tipo de jugador para '${color.getName()}': `);
         } while (answer < 1 || answer > 2)
-        this.#player.setAsBot(answer !== 1);
+
+        this.#player = (answer === 1 ? new UserPlayer(color) : new PlayerBot(color, board));
     }
 
     getColor() {
@@ -352,9 +403,8 @@ class PlayerView {
         let col;
         let repead = false;
         do {
-            if (this.#player.isBot()) {
-                col = this.getAutoSelectedColumn(board);
-            } else {
+            col = this.#player.getSelectedColumn();
+            if (col === null) {
                 col = this.getSelectedColumn(this.#player.getColor());
             }
             if (board.isValidColumn(col)) {
@@ -374,10 +424,6 @@ class PlayerView {
 
     getSelectedColumn(color) {
         return console.readNumber(`Jugador '${color.getName()}' dame una columna`) - 1;
-    }
-
-    getAutoSelectedColumn(board) {
-        return Math.floor(Math.random() * Board.COLUMNS);
     }
 }
 
@@ -429,7 +475,7 @@ class GameView {
     constructor(bindMetod) {
         this.#bindMetod = bindMetod;
         this.boardView = new BoardView();
-        this.playersViews = [new PlayerView(Color.RED), new PlayerView(Color.YELLOW)];
+        this.playersViews = [new PlayerView(Color.RED, this.boardView.getBoard()), new PlayerView(Color.YELLOW, this.boardView.getBoard())];
         this.boardView.show();
     }
 
@@ -484,10 +530,7 @@ class Connect4 {
     #MAX_TURNS = 42;
     #turn;
     #gameView;
-
-    constructor() {
-        
-    }
+    #hasWinner;
 
     play() {
         do {
@@ -508,8 +551,6 @@ class Connect4 {
     isResumed() {
         return this.#gameView.askResume() === 's';
     }
-
-    #hasWinner;
 
     #hasItAWinner(connect4Line) {
         this.#hasWinner = connect4Line.isConnet4();
