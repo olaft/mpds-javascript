@@ -1,5 +1,9 @@
 @startuml Connect4
-class Connect4
+class Connect4 {
+}
+
+class Turn {
+}
 
 class Direction {
     {static} +NORT
@@ -57,6 +61,8 @@ class Connect4Line {
 }
 
 Connect4 *--> "1" GameView
+Connect4 --> "1" Turn
+GameView --> "1" Turn
 GameView *--> "2" PlayerView
 GameView *--> "1" BoardView
 PlayerView *--> "1" Player

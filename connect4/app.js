@@ -1,5 +1,5 @@
 const { Console } = require(`../console-mpds`);
-const console = new Console();
+
 class Color {
     static RED = new Color("R", "Rojo");
     static YELLOW = new Color("Y", "Amarillo");
@@ -7,6 +7,7 @@ class Color {
 
     #name;
     #simbol;
+
     constructor(simbol, name) {
         this.#name = name;
         this.#simbol = simbol;
@@ -217,6 +218,7 @@ class Player {
     #color;
 
     constructor(color) {
+        //1/0;
         this.#color = color;
     }
 
@@ -249,6 +251,7 @@ class UserPlayer extends Player {
 
 class PlayerBot extends Player {
     #board = new Board();
+
     constructor(color, board) {
         super(color);
 
@@ -291,7 +294,6 @@ class Board {
     #connect4Line;
 
     constructor() {
-        this.#connect4Line = new Connect4Line();
         for (let row = 0; row < Board.ROWS; row++) {
             this.#GRID[row] = [];
             for (let col = 0; col < Board.COLUMNS; col++) {
@@ -329,14 +331,14 @@ class Board {
             let cordinate = cell.getShifted(direction);
 
             if (this.isItWithin(cordinate)) {
-                let nextCell = this.getCell(cordinate);
-                if (cell.samenToken(nextCell)) {
-                    cell.addConnection(nextCell, direction);
-                    nextCell.addConnection(cell, direction.getInverse());
+                let adjoiningCell = this.getCell(cordinate);
+                if (cell.samenToken(adjoiningCell)) {
+                    cell.addConnection(adjoiningCell, direction);
+                    adjoiningCell.addConnection(cell, direction.getInverse());
 
                     let connect4Line = cell.getConnect4Line(direction.getKey());
                     if (!connect4Line.isConnet4()) {
-                        connect4Line = nextCell.getConnect4Line(direction.getInverse().getKey())
+                        connect4Line = adjoiningCell.getConnect4Line(direction.getInverse().getKey())
                     }
                     this.#setConnect4Line(connect4Line);
                 }
@@ -436,6 +438,7 @@ class PlayerView extends Console{
 
 class BoardView extends Console{
     #board;
+
     constructor() {
         super();
         this.#board = new Board();
@@ -474,11 +477,12 @@ class BoardView extends Console{
 
 }
 
-class GameView extends Console{
+class Connect4View extends Console{
     #boardView;
     #playersViews;
     #currePlayerView;
     #bindMetod;
+
     constructor(bindMetod) {
         super();
         this.#bindMetod = bindMetod;
@@ -488,7 +492,7 @@ class GameView extends Console{
     }
 
     playTurn(turn) {
-        this.#currePlayerView = this.#playersViews[turn];
+        this.#currePlayerView = this.#playersViews[turn.nextTurn()];
         const selectetCol = this.#currePlayerView.getSelectedCol(this.#boardView.getBoard());
         this.#boardView.getBoard().dropToken(selectetCol, this.#currePlayerView.getToken());
         this.#boardView.show();
@@ -523,7 +527,7 @@ class GameView extends Console{
         return answer;
     }
 
-    getCurrentPlayerColor() {
+    getPlayerColor() {
         return this.#currePlayerView.getColor();
     }
 
@@ -556,28 +560,26 @@ class Turn {
 }
 
 class Connect4 {
-    #gameView;
     #hasWinner;
-    #turn
-
+    #connect4View;
     play() {
         do {
-            this.#turn = new Turn();
-            this.#gameView = new GameView(this.#setWinner.bind(this));
+            let turn = new Turn();
+            this.#connect4View = new Connect4View(this.#setWinner.bind(this));
             do {
-                this.#gameView.playTurn(this.#turn.nextTurn());
-            } while (!this.#hasWinner &&  this.#turn.hasTurns());
+                this.#connect4View.playTurn(turn);
+            } while (!this.#hasWinner && turn.hasTurns());
 
             if (this.#hasWinner) {
-                this.#gameView.showWinner(this.#gameView.getCurrentPlayerColor());
+                this.#connect4View.showWinner(this.#connect4View.getPlayerColor());
             } else {
-                this.#gameView.showTied();
+                this.#connect4View.showTied();
             }
         } while (this.isResumed());
     }
 
     isResumed() {
-        return this.#gameView.askResume() === 's';
+        return this.#connect4View.askResume() === 's';
     }
 
     #setWinner(connect4Line) {
