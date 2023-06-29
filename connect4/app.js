@@ -1,6 +1,5 @@
 const { Console } = require(`../console-mpds`);
 const console = new Console();
-
 class Color {
     static RED = new Color("R", "Rojo");
     static YELLOW = new Color("Y", "Amarillo");
@@ -117,6 +116,26 @@ class Coordinate {
     }
 }
 
+class Token {
+    #color;
+
+    constructor(color) {
+        this.#color = color;
+    }
+
+    getColor() {
+        return this.#color;
+    }
+
+    setColor(color) {
+        this.#color = color;
+    }
+
+    equals(token) {
+        return this.#color.equals(token.getColor());
+    }
+}
+
 class Cell extends Coordinate {
     #token;
     #connectedCells;
@@ -167,26 +186,6 @@ class Cell extends Coordinate {
     }
 }
 
-class Token {
-    #color;
-
-    constructor(color) {
-        this.#color = color;
-    }
-
-    getColor() {
-        return this.#color;
-    }
-
-    setColor(color) {
-        this.#color = color;
-    }
-
-    equals(token) {
-        return this.#color.equals(token.getColor());
-    }
-}
-
 class Connect4Line {
     static TOKENS_TO_WIN = 4;
     #cells;
@@ -233,7 +232,7 @@ class Player {
         return new Token(this.#color);
     }
 
-    getSelectedColumn() { };
+    getSelectedColumn() { 1/0 };
 
 }
 
@@ -243,8 +242,8 @@ class UserPlayer extends Player {
         super(color);
     }
 
-    getSelectedColumn() {
-        return null;
+    accep(visitor) {
+        return visitor.visitUserPlayer(this);
     }
 }
 
@@ -254,6 +253,10 @@ class PlayerBot extends Player {
         super(color);
 
         this.#board = board;
+    }
+
+    accep(visitor) {
+        return visitor.visitBotPlayer(this);
     }
 
     getSelectedColumn() {
@@ -266,7 +269,6 @@ class PlayerBot extends Player {
                     let cell = this.#board.getCell(coordinate);
                     if (cell.getConnections().size > prioritiCell.getConnections().size && cell.getConnections().size > 2) {
                         prioritiCell = cell;
-                        console.writeln(` ${prioritiCell} size ${prioritiCell.getConnections().size}`);
                     }
                 }
             }
@@ -374,18 +376,18 @@ class Board {
     getLastFilledCell() {
         return this.#lastFilledCell;
     }
-
 }
 
-class PlayerView {
+class PlayerView extends Console{
     #player;
+    #board;
 
     constructor(color, board) {
+        super();
         let answer;
-
-        console.writeln(`------- ${board}`);
+        this.#board = board;
         do {
-            answer = console.readNumber(`[1] Player\n[2] CPU\nSelecciona tipo de jugador para '${color.getName()}': `);
+            answer = this.readNumber(`[1] Player\n[2] CPU\nSelecciona tipo de jugador para '${color.getName()}': `);
         } while (answer < 1 || answer > 2)
 
         this.#player = (answer === 1 ? new UserPlayer(color) : new PlayerBot(color, board));
@@ -399,61 +401,67 @@ class PlayerView {
         return this.#player.getToken();
     }
 
-    getCol(board) {
+    getSelectedCol() {
+        return this.#player.accep(this);
+    }
+
+    visitBotPlayer(player) {
+        return player.getSelectedColumn();
+    }
+
+    visitUserPlayer(player) {
+        return this.#getCol(player.getColor());
+    }
+
+    #getCol(color) {
         let col;
         let repead = false;
         do {
-            col = this.#player.getSelectedColumn();
-            if (col === null) {
-                col = this.getSelectedColumn(this.#player.getColor());
-            }
-            if (board.isValidColumn(col)) {
-                repead = board.isColumnFull(col);
+            col = this.readNumber(`Jugador '${color.getName()}' dame una columna`) - 1;
+            if (this.#board.isValidColumn(col)) {
+                repead = this.#board.isColumnFull(col);
                 if (repead) {
-                    console.writeln(`--------------------------------------`);
-                    console.writeln(`La columna ${col + 1} esta llena`);
+                    this.writeln(`--------------------------------------`);
+                    this.writeln(`La columna ${col + 1} esta llena`);
                 }
             } else {
-                console.writeln(`--------------------------------------`);
-                console.writeln(`La columna ${col + 1} no es valida`);
+                this.writeln(`--------------------------------------`);
+                this.writeln(`La columna ${col + 1} no es valida`);
                 repead = true;
             }
         } while (repead)
         return col;
     }
-
-    getSelectedColumn(color) {
-        return console.readNumber(`Jugador '${color.getName()}' dame una columna`) - 1;
-    }
 }
 
-class BoardView {
+class BoardView extends Console{
     #board;
     constructor() {
+        super();
         this.#board = new Board();
     }
 
     show() {
-        console.writeln(`-------Conect4-------`);
+        this.writeln(`-------Conect4-------`);
         for (let col = 0; col < this.#board.getGrid()[0].length; col++) {
-            console.write(`|${col + 1}|`);
+            this.write(`|${col + 1}|`);
         }
-        console.writeln(`\n---------------------`);
+        this.writeln(`\n---------------------`);
         for (let row = this.#board.getGrid().length - 1; row >= 0; row--) {
             for (let col = 0; col < this.#board.getGrid()[row].length; col++) {
                 let cell = this.#board.getGrid()[row][col];
                 if (cell !== undefined) {
                     if (cell.getToken() !== undefined) {
                         let color = cell.getToken().getColor();
-                        console.write(`|${color.getSimbol()}|`);
+                        this.write(`|${color.getSimbol()}|`);
                     } else {
-                        console.write(`|${Color.LESS.getSimbol()}|`);
+                        this.write(`|${Color.LESS.getSimbol()}|`);
                     }
                 }
             }
-            console.writeln();
+            this.writeln();
         }
-        console.writeln(`---------------------`);
+        this.writeln(`---------------------`);
     }
 
     getConnect4Line() {
@@ -466,81 +474,101 @@ class BoardView {
 
 }
 
-class GameView {
-    boardView;
-    playersViews;
-    boardView;
-    currePlayerView;
+class GameView extends Console{
+    #boardView;
+    #playersViews;
+    #currePlayerView;
     #bindMetod;
     constructor(bindMetod) {
+        super();
         this.#bindMetod = bindMetod;
-        this.boardView = new BoardView();
-        this.playersViews = [new PlayerView(Color.RED, this.boardView.getBoard()), new PlayerView(Color.YELLOW, this.boardView.getBoard())];
-        this.boardView.show();
+        this.#boardView = new BoardView();
+        this.#playersViews = [new PlayerView(Color.RED, this.#boardView.getBoard()), new PlayerView(Color.YELLOW, this.#boardView.getBoard())];
+        this.#boardView.show();
     }
 
     playTurn(turn) {
-        this.currePlayerView = this.playersViews[turn];
-        const selectetCol = this.currePlayerView.getCol(this.boardView.getBoard());
-        this.boardView.getBoard().dropToken(selectetCol, this.currePlayerView.getToken());
-        this.boardView.show();
-        this.#bindMetod(this.boardView.getConnect4Line());
+        this.#currePlayerView = this.#playersViews[turn];
+        const selectetCol = this.#currePlayerView.getSelectedCol(this.#boardView.getBoard());
+        this.#boardView.getBoard().dropToken(selectetCol, this.#currePlayerView.getToken());
+        this.#boardView.show();
+        this.#bindMetod(this.#boardView.getConnect4Line());
     }
 
     showWinner(color) {
-        console.writeln(`--------------------------------------`);
-        console.writeln(`Felicidades '${color.getName()}' eres el ganador :-)`);
-        console.write(`(${this.boardView.getConnect4Line()}) `);
-        console.writeln();
+        this.writeln(`--------------------------------------`);
+        this.writeln(`Felicidades '${color.getName()}' eres el ganador :-)`);
+        this.write(`(${this.#boardView.getConnect4Line()}) `);
+        this.writeln();
     }
 
     showTied() {
-        console.writeln(`--------------------------------------`);
-        console.writeln(`No hay un ganador :-(`);
-        console.writeln(`--------------------------------------`);
+        this.writeln(`--------------------------------------`);
+        this.writeln(`No hay un ganador :-(`);
+        this.writeln(`--------------------------------------`);
     }
 
     askResume() {
         let isValidAnswer;
         let answer;
         do {
-            answer = console.readString(`¿Quieres jugar otra partida? (s/n):`);
+            answer = this.readString(`¿Quieres jugar otra partida? (s/n):`);
             isValidAnswer = answer === 's' || answer === 'n';
             if (!isValidAnswer) {
-                console.writeln(`--------------------------------------`);
-                console.writeln(`Respuesta incorrecta :-(`);
-                console.writeln(`--------------------------------------`);
+                this.writeln(`--------------------------------------`);
+                this.writeln(`Respuesta incorrecta :-(`);
+                this.writeln(`--------------------------------------`);
             }
         } while (!isValidAnswer);
         return answer;
     }
 
     getCurrentPlayerColor() {
-        return this.currePlayerView.getColor();
+        return this.#currePlayerView.getColor();
     }
 
     getBoard() {
-        return this.boardView.getBoard();
+        return this.#boardView.getBoard();
     }
 
 }
 
-class Connect4 {
-    #MAX_PLAYERS = 2;
-    #MAX_TURNS = 42;
+class Turn {
+    static MAX_PLAYERS = 2;
+    static MAX_TURNS = 42;
     #turn;
+
+    constructor() {
+        this.#turn = 0;
+    }
+
+    nextTurn() {
+        return (this.#turn++) % Turn.MAX_PLAYERS;
+    }
+
+    getTurnNumber() {
+        return this.#turn;
+    }
+
+    hasTurns() {
+        return this.#turn < Turn.MAX_TURNS;
+    }
+}
+
+class Connect4 {
     #gameView;
     #hasWinner;
+    #turn
 
     play() {
         do {
-            this.#turn = 0;
-            this.#gameView = new GameView(this.#hasItAWinner.bind(this));
+            this.#turn = new Turn();
+            this.#gameView = new GameView(this.#setWinner.bind(this));
             do {
-                this.#gameView.playTurn(this.nextTurn());
-            } while (!this.#hasWinner && this.#turn < this.#MAX_TURNS);
+                this.#gameView.playTurn(this.#turn.nextTurn());
+            } while (!this.#hasWinner &&  this.#turn.hasTurns());
 
-            if (this.#turn < this.#MAX_TURNS) {
+            if (this.#hasWinner) {
                 this.#gameView.showWinner(this.#gameView.getCurrentPlayerColor());
             } else {
                 this.#gameView.showTied();
@@ -552,12 +580,8 @@ class Connect4 {
         return this.#gameView.askResume() === 's';
     }
 
-    #hasItAWinner(connect4Line) {
+    #setWinner(connect4Line) {
         this.#hasWinner = connect4Line.isConnet4();
-    }
-
-    nextTurn() {
-        return (this.#turn++) % this.#MAX_PLAYERS;
     }
 }
 

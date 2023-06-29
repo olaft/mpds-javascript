@@ -1,48 +1,60 @@
 @startuml Connect4
 class Connect4
 
-class Direction
+class Direction {
+    {static} +NORT
+    {static} +NORT_EAST
+    {static} +EAST
+    {static} +SOUTH_EAST
+    {static} +SOUTH
+    {static} +SOUTH_WEST
+    {static} +WEST
+    {static} +NORT_WEST
+}
 
 class Board{
     -GRID:Array
-    getGrid()
-    putToken()
+    +getGrid()
+    +putToken()
+    +connectCell(Cell cell)
 }
 class GameView {
 }
 class PlayerView {
 }
 class BoardView {
-    show()
+    +show()
 }
 class Player {
     -color
-    getToken()
-    getColor()
-    getSelectedColumn()
+    +getToken()
+    +getColor()
+    {abstract} +getSelectedColumn()
 }
 class UserPlayer {
-    getSelectedColumn()
+    +getSelectedColumn()
 }
 class BotPlayer {
-    getSelectedColumn()
+    +getSelectedColumn()
 }
 class Cell {
     -token
-    getToken()
-    setToken()
+    +getToken()
+    +setToken()
 }
 class Coordinate {
-    getShifted()
-    getCol()
-    setCol()
-    getRow()
-    setRow()
+    +getShifted()
+    +getCol()
+    +setCol()
+    +getRow()
+    +setRow()
 }
 class Token
 class Color{
 }
-class Connect4Line
+class Connect4Line {
+    +isConnet4()
+}
 
 Connect4 *--> "1" GameView
 GameView *--> "2" PlayerView
@@ -51,14 +63,15 @@ PlayerView *--> "1" Player
 BoardView *--> "1" Board
 Connect4Line *--> "1..4" Cell
 Board --> Connect4Line
-Board --> Direction
-Token *--> Color
-Player o--> "0..21" Token
-Player ..> Color
+Board ..> Direction
+Token *--> "1" Color
+PlayerView ..> "1" Board
+Player ..> "0..21" Token
+Player ..> "1"Color
 Player <|-- UserPlayer
 Player <|-- BotPlayer
 Coordinate <|-- Cell
-Coordinate --> Direction
+Coordinate ..> Direction
 Board *---> "0..6x7" Cell
 Cell o--> "1" Token
 @enduml
