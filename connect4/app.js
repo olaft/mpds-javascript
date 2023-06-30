@@ -218,7 +218,6 @@ class Player {
     #color;
 
     constructor(color) {
-        //1/0;
         this.#color = color;
     }
 
@@ -249,12 +248,11 @@ class UserPlayer extends Player {
     }
 }
 
-class PlayerBot extends Player {
+class BotPlayer extends Player {
     #board = new Board();
 
     constructor(color, board) {
         super(color);
-
         this.#board = board;
     }
 
@@ -380,6 +378,28 @@ class Board {
     }
 }
 
+class Turn {
+    static MAX_PLAYERS = 2;
+    static MAX_TURNS = 42;
+    #turn;
+
+    constructor() {
+        this.#turn = 0;
+    }
+
+    nextTurn() {
+        return (this.#turn++) % Turn.MAX_PLAYERS;
+    }
+
+    getTurnNumber() {
+        return this.#turn;
+    }
+
+    hasTurns() {
+        return this.#turn < Turn.MAX_TURNS;
+    }
+}
+
 class PlayerView extends Console{
     #player;
     #board;
@@ -392,7 +412,7 @@ class PlayerView extends Console{
             answer = this.readNumber(`[1] Player\n[2] CPU\nSelecciona tipo de jugador para '${color.getName()}': `);
         } while (answer < 1 || answer > 2)
 
-        this.#player = (answer === 1 ? new UserPlayer(color) : new PlayerBot(color, board));
+        this.#player = (answer === 1 ? new UserPlayer(color) : new BotPlayer(color, board));
     }
 
     getColor() {
@@ -535,28 +555,6 @@ class Connect4View extends Console{
         return this.#boardView.getBoard();
     }
 
-}
-
-class Turn {
-    static MAX_PLAYERS = 2;
-    static MAX_TURNS = 42;
-    #turn;
-
-    constructor() {
-        this.#turn = 0;
-    }
-
-    nextTurn() {
-        return (this.#turn++) % Turn.MAX_PLAYERS;
-    }
-
-    getTurnNumber() {
-        return this.#turn;
-    }
-
-    hasTurns() {
-        return this.#turn < Turn.MAX_TURNS;
-    }
 }
 
 class Connect4 {
